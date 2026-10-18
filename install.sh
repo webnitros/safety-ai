@@ -1,10 +1,10 @@
 #!/bin/bash
-# Ставит хук режима изоляции в Claude Code и приложение-тумблер в строку меню. Повторный запуск безопасен.
+# Installs the isolation hook into Claude Code and the menu bar toggle app. Safe to re-run.
 set -euo pipefail
 cd "$(dirname "$0")"
-command -v jq >/dev/null || { echo "Нужен jq" >&2; exit 1; }
+command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
-# 1. Хук
+# 1. Hook
 hook=~/.claude/hooks/isolation.sh
 settings=~/.claude/settings.json
 mkdir -p ~/.claude/hooks
@@ -17,20 +17,22 @@ if ! grep -q 'hooks/isolation.sh' "$settings"; then
     .hooks.PreToolUse += [{"matcher":"Bash|mcp__.*__(add_commit|add_branch|accept_merge_request|save_merge_request)","hooks":[{"type":"command","command":$h,"timeout":10}]}]
     | .hooks.UserPromptSubmit += [{"hooks":[{"type":"command","command":($h+" prompt"),"timeout":10}]}]
   ' "$settings.bak-isolation" > "$settings"
-  echo "Хук подключён в $settings (копия: $settings.bak-isolation)"
+  echo "Hook registered in $settings (backup: $settings.bak-isolation)"
 fi
 
-# 2. Приложение
+# 2. App
 app=~/Applications/"Safety AI.app"
 agent=~/Library/LaunchAgents/local.safety-ai.plist
 pkill -x SafetyAI 2>/dev/null || true
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
-# CLT 6.3 не дружит с SDK 27, берём 26.5 если есть
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+# Command Line Tools may ship a Swift older than the newest SDK; prefer 26.5 when present
 sdk=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
 [ -d "$sdk" ] || sdk=$(xcrun --show-sdk-path)
 swiftc -O -sdk "$sdk" app/main.swift -o "$app/Contents/MacOS/SafetyAI"
-cat > "$app/Contents/Info.plist" <<'EOF'
+cp -R app/*.lproj "$app/Contents/Resources/"
+langs=$(cd app && ls -d *.lproj | sed 's/\.lproj$//; s|.*|<string>&</string>|' | tr -d '\n')
+cat > "$app/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -38,12 +40,14 @@ cat > "$app/Contents/Info.plist" <<'EOF'
   <key>CFBundleName</key><string>Safety AI</string>
   <key>CFBundleExecutable</key><string>SafetyAI</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array>$langs</array>
   <key>LSUIElement</key><true/>
 </dict></plist>
 EOF
 codesign -s - --force "$app"
 
-# 3. Автозапуск при входе
+# 3. Start at login
 cat > "$agent" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -55,4 +59,4 @@ cat > "$agent" <<EOF
 EOF
 
 open "$app"
-echo "Готово: замок в строке меню."
+echo "Done: lock icon is in the menu bar."

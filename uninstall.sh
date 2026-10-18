@@ -1,5 +1,5 @@
 #!/bin/bash
-# Убирает приложение, автозапуск, хук и флаг. settings.json чистится от записей isolation.sh.
+# Removes the app, login item, hook and flag, and cleans isolation.sh entries out of settings.json.
 set -euo pipefail
 pkill -x SafetyAI 2>/dev/null || true
 rm -rf ~/Applications/"Safety AI.app" ~/Library/LaunchAgents/local.safety-ai.plist ~/.claude/hooks/isolation.sh ~/.claude/isolation
@@ -9,4 +9,4 @@ if [ -f "$settings" ] && grep -q 'hooks/isolation.sh' "$settings"; then
   jq '(.hooks.PreToolUse, .hooks.UserPromptSubmit) |= map(select(all(.hooks[]; (.command | contains("hooks/isolation.sh")) | not)))' \
     "$settings.bak-uninstall" > "$settings"
 fi
-echo "Удалено."
+echo "Removed."

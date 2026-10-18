@@ -1,70 +1,86 @@
+**English** | [Русский](README.ru.md)
+
 # Safety AI
 
-Тумблер в строке меню macOS, который запрещает [Claude Code](https://claude.com/claude-code) коммитить.
+A macOS menu bar toggle that stops [Claude Code](https://claude.com/claude-code) from committing.
 
-Включил режим изоляции: агент правит код, но не делает `commit`, `push`, `merge`, `rebase`, теги и MR
-ни в одном репозитории и не спрашивает «закоммитить?». Все изменения остаются в рабочем дереве.
-Выключил: Claude работает как обычно.
+Turn isolation mode on and the agent keeps editing code, but it won't `commit`, `push`, `merge`, `rebase`, tag
+or open MRs in any repository, and it stops asking "should I commit?". All changes stay in the working tree.
+Turn it off and Claude behaves as usual.
 
-## Установка
+## Install
 
-Нужны macOS 13+, Command Line Tools (`xcode-select --install`) и `jq` (в macOS 15+ уже есть).
+Requires macOS 13+, Command Line Tools (`xcode-select --install`) and `jq` (bundled with macOS 15+).
 
 ```bash
 git clone <repo> && cd safety-ai
 ./install.sh
 ```
 
-Скрипт:
-1. копирует хук в `~/.claude/hooks/isolation.sh` и подключает его в `~/.claude/settings.json`
-   (копия старого файла: `settings.json.bak-isolation`);
-2. собирает `~/Applications/Safety AI.app`;
-3. ставит автозапуск при входе (`~/Library/LaunchAgents/local.safety-ai.plist`) и запускает приложение.
+The script:
+1. copies the hook to `~/.claude/hooks/isolation.sh` and registers it in `~/.claude/settings.json`
+   (the previous file is saved as `settings.json.bak-isolation`);
+2. builds `~/Applications/Safety AI.app`;
+3. adds a login item (`~/Library/LaunchAgents/local.safety-ai.plist`) and launches the app.
 
-Повторный запуск безопасен: хук не задвоится, приложение пересоберётся.
+Re-running is safe: the hook is not registered twice, the app is rebuilt.
 
-## Как пользоваться
+## Usage
 
-Справа вверху в строке меню появится замок:
-- 🔒 закрытый — изоляция включена, коммиты запрещены;
-- 🔓 открытый — выключена.
+A lock appears on the right side of the menu bar:
+- 🔒 closed: isolation is on, commits are blocked;
+- 🔓 open: isolation is off.
 
-Клик по замку → «Режим изоляции». Действует сразу, в том числе в уже открытых сессиях Claude.
+Click the lock → "Isolation mode". It takes effect immediately, including in Claude sessions that are already open.
 
-То же из терминала:
+Same from a terminal:
 ```bash
-touch ~/.claude/isolation   # включить
-rm ~/.claude/isolation      # выключить
+touch ~/.claude/isolation   # on
+rm ~/.claude/isolation      # off
 ```
 
-## Как это работает
+## How it works
 
-Состояние — один файл-флаг `~/.claude/isolation`. Приложение его создаёт и удаляет, хук его читает.
+The whole state is one flag file, `~/.claude/isolation`. The app creates and deletes it, the hook reads it.
 
-- **`PreToolUse`**: перед каждой командой Claude хук проверяет флаг. Если он есть, блокирует
-  `git commit/push/merge/rebase/cherry-pick/am/tag` через Bash и `add_commit`, `add_branch`,
-  `save_merge_request`, `accept_merge_request` через GitLab MCP. Команды чтения (`git status`, `diff`, `log`) проходят.
-- **`UserPromptSubmit`**: к каждому сообщению пользователя добавляется напоминание «не коммить и не спрашивай про коммит».
-  Без него агент продолжал бы предлагать коммит.
-- При включённом режиме Claude не может удалить флаг: команды, которые его упоминают, блокируются.
+- **`PreToolUse`**: before every Claude tool call the hook checks the flag. If it is set, it blocks
+  `git commit/push/merge/rebase/cherry-pick/am/tag` via Bash and `add_commit`, `add_branch`,
+  `save_merge_request`, `accept_merge_request` via GitLab MCP. Read-only commands (`git status`, `diff`, `log`) pass.
+- **`UserPromptSubmit`**: every user message gets a reminder "don't commit and don't ask about committing".
+  Without it the agent would keep offering to commit.
+- While isolation is on, Claude cannot remove the flag: commands that mention it are blocked.
 
 ```
-app/main.swift       приложение для строки меню (AppKit, без зависимостей)
-hooks/isolation.sh   хук Claude Code
-install.sh           установка
-uninstall.sh         удаление
+app/main.swift       menu bar app (AppKit, no dependencies)
+app/*.lproj/         UI translations
+hooks/isolation.sh   Claude Code hook
+install.sh           install
+uninstall.sh         uninstall
 ```
 
-## Ограничения
+## Languages
 
-- Это защита от случайных коммитов, а не песочница: агент, который специально ищет обход, его найдёт.
-- Git, запущенный через сторонние MCP-терминалы (например, PhpStorm `execute_terminal_command`), хук не видит.
-- Кнопку «Commit» в Claude desktop рисует само приложение. Нажатие на неё при включённой изоляции упрётся в хук.
+The app follows the macOS language setting (System Settings → General → Language & Region,
+or per app via Applications → Safety AI). Bundled: English, Russian.
 
-## Удаление
+To add a language, copy `app/en.lproj` to `app/<code>.lproj` (e.g. `de.lproj`), translate the right-hand
+strings in `Localizable.strings` and run `./install.sh` again. Pull requests with translations are welcome.
+
+## Limitations
+
+- This guards against accidental commits, it is not a sandbox: an agent deliberately looking for a bypass will find one.
+- The hook does not see git run through third-party MCP terminals (e.g. PhpStorm `execute_terminal_command`).
+- The "Commit" button in Claude desktop is drawn by the app itself. Pressing it while isolation is on hits the hook.
+
+## Uninstall
 
 ```bash
 ./uninstall.sh
 ```
 
-Убирает приложение, автозапуск, хук, флаг и записи хука из `settings.json` (копия: `settings.json.bak-uninstall`).
+Removes the app, the login item, the hook, the flag and the hook entries in `settings.json`
+(backup: `settings.json.bak-uninstall`).
+
+## License
+
+[MIT](LICENSE)
