@@ -57,3 +57,4 @@
 "%@ left" = "%@ left";
 "Duration" = "Duration";
 "duration.hint" = "How long isolation stays on after you switch it on. When time is up it turns off by itself.";
+"No answer: %@ in %d s" = "No answer: %@ in %d s";

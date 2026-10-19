@@ -481,7 +481,67 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     }
 }
 
+// SafetyAI --ask <title> <text> <deny> <allow> [seconds]: the hook's Allow/Deny window.
+// Prints the pressed button. Deny is the default (Return); when time runs out it prints deny.
+func ask(_ a: [String]) -> Never {
+    let (title, text, denyTitle, allowTitle) = (a[0], a[1], a[2], a[3])
+    var left = a.count > 4 ? Int(a[4]) ?? 90 : 90
+    NSApp.setActivationPolicy(.accessory)
+    let alert = NSAlert()
+    alert.messageText = title
+    alert.informativeText = text
+    let deny = alert.addButton(withTitle: denyTitle)
+    alert.addButton(withTitle: allowTitle)
+
+    // countdown: shrinking bar and a line under it, so it is clear the window will not wait forever
+    let bar = NSProgressIndicator(frame: NSRect(x: 0, y: 22, width: 320, height: 12))
+    bar.style = .bar
+    bar.isIndeterminate = false
+    bar.minValue = 0
+    bar.maxValue = Double(left)
+    let label = NSTextField(labelWithString: "")
+    label.frame = NSRect(x: 0, y: 0, width: 320, height: 16)
+    label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+    label.textColor = .secondaryLabelColor
+    let box = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 36))
+    box.addSubview(bar)
+    box.addSubview(label)
+    alert.accessoryView = box
+
+    func show() {
+        bar.doubleValue = Double(left)
+        deny.title = "\(denyTitle) (\(left))"
+        label.stringValue = String(format: t("No answer: %@ in %d s"), denyTitle.lowercased(), left)
+    }
+    show()
+    let tick = Timer(timeInterval: 1, repeats: true) { _ in
+        left -= 1
+        show()
+        if left <= 0 { NSApp.stopModal(withCode: .alertFirstButtonReturn) }
+    }
+    RunLoop.main.add(tick, forMode: .modalPanel)
+    if let out = ProcessInfo.processInfo.environment["SAFETY_AI_SNAPSHOT"] {
+        // for visual checks: render the window after a moment, then deny
+        let snap = Timer(timeInterval: 1.5, repeats: false) { _ in
+            if let v = alert.window.contentView, let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds) {
+                v.cacheDisplay(in: v.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: out))
+            }
+            NSApp.stopModal(withCode: .alertFirstButtonReturn)
+        }
+        RunLoop.main.add(snap, forMode: .modalPanel)
+    } else {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    let r = alert.runModal()
+    print(r == .alertSecondButtonReturn ? allowTitle : denyTitle)
+    exit(0)
+}
+
 let app = NSApplication.shared
+if let i = CommandLine.arguments.firstIndex(of: "--ask"), CommandLine.arguments.count >= i + 5 {
+    ask(Array(CommandLine.arguments[(i + 1)...]))
+}
 let delegate = App()
 app.delegate = delegate
 app.run()

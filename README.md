@@ -56,8 +56,11 @@ The app lives in the menu bar and shows in the Dock only while the settings wind
 | Pull / merge requests | `gh pr create/merge`; GitLab MCP `save_merge_request`, `accept_merge_request` |
 
 **Ask for permission**: instead of blocking right away, a window pops up with the command and the
-project folder. **Allow** lets it through, **Deny** blocks it. Deny is the default button,
-and no answer in 90 seconds also means deny.
+project folder. **Allow** lets it through, **Deny** blocks it. Deny is the default button (Return).
+A countdown on the Deny button and a shrinking bar show that it won't wait forever:
+no answer in 90 seconds means deny.
+
+<img src="docs/ask-en.png" width="300" alt="Allow / Deny window">
 
 **Custom rules**: your own bans for any shell command, one regex per line (` +` means one or more spaces).
 "Add example" has ready-made ones:

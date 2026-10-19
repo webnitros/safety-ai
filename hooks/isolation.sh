@@ -72,8 +72,11 @@ fi
 cwd=$(jq -r '.cwd // ""' <<<"$in")
 
 # Allow/Deny dialog; prints the pressed button. Deny is the default, no answer in 90 s = deny.
+# The app draws it with a countdown; plain AppleScript is the fallback when the app is not installed.
 dialog() {
   [ -n "${SAFETY_AI_DIALOG:-}" ] && { "$SAFETY_AI_DIALOG" "$@"; return; }
+  local app_bin="$HOME/Applications/Safety AI.app/Contents/MacOS/SafetyAI"
+  [ -x "$app_bin" ] && { "$app_bin" --ask "$@" 90 2>/dev/null; return; }
   osascript - "$@" "$HOME/Applications/Safety AI.app/Contents/Resources/AppIcon.icns" <<'EOF' 2>/dev/null
 on run argv
   set ic to caution
