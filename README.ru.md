@@ -1,6 +1,10 @@
 [English](README.md) | **Русский**
 
+<img src="docs/logo.png" width="96" alt="Логотип Safety AI">
+
 # Safety AI
+
+Канал в Telegram: [t.me/+zq1Hy9cbbEphYWQy](https://t.me/+zq1Hy9cbbEphYWQy)
 
 Переключатель в строке меню macOS, который запрещает [Claude Code](https://claude.com/claude-code) коммитить,
 пушить и делать всё остальное, что ты запретишь.

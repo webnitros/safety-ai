@@ -1,6 +1,10 @@
 **English** | [Русский](README.ru.md)
 
+<img src="docs/logo.png" width="96" alt="Safety AI logo">
+
 # Safety AI
+
+Telegram channel: [t.me/+zq1Hy9cbbEphYWQy](https://t.me/+zq1Hy9cbbEphYWQy)
 
 A macOS menu bar switch that stops [Claude Code](https://claude.com/claude-code) from committing, pushing
 and doing whatever else you forbid.
